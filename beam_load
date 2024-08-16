@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -euo pipefail
+
+usage() {
+    echo "Usage: $(basename "$0") path_to_ebin [-p]"
+    echo "Example: $(basename "$0") ebin/aws_install.beam"
+    exit 1
+}
+
+if [ $# -lt 1 ]; then
+    usage
+fi
+
+FILEPATH="$1"
+PERSIST="${2:-}"
+
+if [ ! -f "$FILEPATH" ]; then
+    echo "Error: File not found: $FILEPATH" >&2
+    exit 1
+fi
+
+FILENAME=$(basename "$FILEPATH")
+MODULE="${FILENAME%.*}"
+
+# Check if Erlang is installed
+if ! command -v erl &> /dev/null; then
+    echo "Error: Erlang is not installed or not in PATH" >&2
+    exit 1
+fi
+
+if [ "$PERSIST" = "-p" ]; then
+erl -noshell -eval "Mod = $MODULE, Name = \"$FILENAME\", io:format(\"file:write_file(code:where_is_file(\\\"~s\\\"), base64:decode(~p)).~ncode:soft_purge(~w).~ncode:load_file(~w).~n\", [Name, base64:encode(element(2, file:read_file(\"$FILEPATH\"))), Mod, Mod])" -eval 'erlang:halt()'
+else
+erl -noshell -eval "Mod = $MODULE, Name = \"$FILENAME\", io:format(\"code:load_binary(~w, \\\"~s\\\", base64:decode(~p)).~n\", [Mod, Name, base64:encode(element(2, file:read_file(\"$FILEPATH\")))])" -eval 'erlang:halt()'
+fi

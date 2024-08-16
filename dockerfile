@@ -1,23 +1,39 @@
-# Use the official Erlang image as a parent image
-FROM erlang:24
+# Build stage
+FROM erlang:24-alpine AS builder
 
-# Set the working directory in the container
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Set working directory
 WORKDIR /app
 
-# Copy the rebar.config file
-COPY rebar.config .
+# Copy only the files needed for dependency installation
+COPY rebar.config rebar.lock ./
 
-# Copy the source code
-COPY src/ src/
+# Install dependencies
+RUN rebar3 get-deps
 
-# Copy the release configuration
-COPY webserver.config .
+# Copy the rest of the application code
+COPY . .
 
-# Build the release
+# Compile the release
 RUN rebar3 as prod release
 
-# Expose the port the app runs on
+# Final stage
+FROM alpine:3.14
+
+# Install runtime dependencies
+RUN apk add --no-cache openssl ncurses-libs libstdc++
+
+# Set working directory
+WORKDIR /app
+
+# Copy the release from the builder stage
+COPY --from=builder /app/_build/prod/rel/webserver ./
+
+# Expose the application port
 EXPOSE 8080
 
-# Command to run the application
-CMD ["_build/prod/rel/webserver/bin/webserver", "foreground"]
+# Set the entrypoint to start the release
+ENTRYPOINT ["/app/bin/webserver"]
+CMD ["foreground"]

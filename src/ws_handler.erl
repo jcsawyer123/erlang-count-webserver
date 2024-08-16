@@ -7,6 +7,8 @@
 -export([websocket_handle/2]).
 -export([websocket_info/2]).
 
+-define(PING_INTERVAL, 20000).
+
 init(Req, State) ->
     {cowboy_websocket, Req, State}.
 
@@ -15,8 +17,14 @@ websocket_init(State) ->
     {ok, State}.
 
 websocket_handle(_Data, State) ->
+    {ok, State};
+websocket_handle({text, <<"ping">>}, State) ->
+    {reply, {text, <<"pong">>}, State};
+websocket_handle(_Data, State) ->
     {ok, State}.
-
+websocket_info(ping, State) ->
+    erlang:send_after(?PING_INTERVAL, self(), ping),
+    {reply, ping, State};
 websocket_info(update, State) ->
     {Count, RPS} = request_counter:get_stats(),
     Json = jsx:encode(#{count => Count, rps => RPS}),

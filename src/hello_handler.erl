@@ -48,6 +48,16 @@ init(Req0, State) ->
     <div id=\"rps\">">>, io_lib:format("~.1f", [RPS]), <<" requests/second</div>
     <script>
         var ws = new WebSocket('ws://' + window.location.host + '/ws');
+
+        ws.onopen = function() {
+            console.log('Websocket Connected')
+            pingInterval = setInterval(function() {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send('ping');
+                }
+            }, 20000)
+        }
+
         ws.onmessage = function(event) {
             var data = JSON.parse(event.data);
             var countElement = document.getElementById('count');
@@ -57,6 +67,15 @@ init(Req0, State) ->
             countElement.style.animation = 'none';
             void countElement.offsetWidth; // Trigger reflow
             countElement.style.animation = 'pulse 0.5s ease';
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket disconnected');
+            clearInterval(pingInterval);
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
         };
     </script>
 </body>

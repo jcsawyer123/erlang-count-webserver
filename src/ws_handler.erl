@@ -16,7 +16,7 @@ websocket_init(State) ->
     erlang:send_after(5000, self(), update),
     {ok, State}.
 
-websocket_handle(_Data, State) ->
+websocket_handle(ping, State) ->
     {ok, State};
 websocket_handle({text, <<"ping">>}, State) ->
     {reply, {text, <<"pong">>}, State};

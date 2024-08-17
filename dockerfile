@@ -7,20 +7,15 @@ RUN apk add --no-cache git
 # Set working directory
 WORKDIR /app
 
-# Copy only the files needed for dependency installation
-COPY rebar.config rebar.lock ./
-
-# Install dependencies
-RUN rebar3 get-deps
-
-# Copy the rest of the application code
+# Copy the entire application
 COPY . .
 
-# Compile the release
+# Install dependencies and compile the release
+RUN rebar3 get-deps
 RUN rebar3 as prod release
 
 # Final stage
-FROM alpine:3.14
+FROM erlang:24-alpine
 
 # Install runtime dependencies
 RUN apk add --no-cache openssl ncurses-libs libstdc++
@@ -35,5 +30,4 @@ COPY --from=builder /app/_build/prod/rel/webserver ./
 EXPOSE 8080
 
 # Set the entrypoint to start the release
-ENTRYPOINT ["/app/bin/webserver"]
-CMD ["foreground"]
+CMD ["bin/webserver", "foreground"]
